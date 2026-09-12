@@ -309,21 +309,36 @@ button:disabled:hover{border-color:var(--line);}
   border:1px solid var(--line-soft);
   border-left:3px solid var(--ash);
   border-radius:6px;
-  padding:12px 14px;
-  display:flex;
-  justify-content:space-between;
-  gap:10px;
   font-size:13px;
+  overflow:hidden;
 }
+.list-entry .le-row{
+  display:flex;justify-content:space-between;align-items:center;gap:10px;
+  padding:12px 14px;cursor:pointer;
+}
+.list-entry .le-row:hover{background:rgba(255,255,255,.03);}
 .list-entry .le-main{min-width:0;}
 .list-entry .le-name{font-weight:700;}
 .list-entry .le-meta{color:var(--muted);font-size:12px;margin-top:2px;}
+.list-entry .le-actions{flex:none;display:flex;align-items:center;gap:8px;}
+.list-entry .le-chevron{
+  color:var(--muted-dim);font-size:11px;display:inline-block;
+  transition:transform .15s ease;
+}
+@media (prefers-reduced-motion:reduce){.list-entry .le-chevron{transition:none;}}
+.list-entry.expanded .le-chevron{transform:rotate(90deg);color:var(--gold);}
 .list-entry .le-del{
   flex:none;
   background:transparent;border:none;color:var(--muted-dim);
   font-size:16px;line-height:1;cursor:pointer;padding:2px 6px;
 }
 .list-entry .le-del:hover{color:var(--danger);}
+.list-entry .le-detail{padding:0 14px 14px;}
+.list-entry .le-detail pre{
+  margin:0;font-family:'M PLUS 1 Code',monospace;font-size:12px;color:var(--ink);
+  background:var(--void);border:1px solid var(--line-soft);border-radius:6px;
+  padding:10px 12px;white-space:pre-wrap;word-break:break-word;
+}
 .le-tag{
   font-size:10px;color:var(--verdigris);border:1px solid var(--verdigris);
   border-radius:20px;padding:1px 7px;margin-left:6px;white-space:nowrap;
@@ -517,7 +532,7 @@ footer.note{margin-top:32px;font-size:12px;color:var(--muted-dim);}
       </div>
       <button class="primary" id="sendRequestBtn">実装依頼を出す</button>
     </div>
-    <p class="hint" style="text-align:left;margin-top:10px;">これはこのブラウザだけの下書き置き場だよ。「実装依頼を出す」を押すと、下書きがスプレッドシートに送られてMOD管理者に見えるようになるよ。合言葉はコードには書いてないので、友達伝いに聞いてね。 <a class="sheet-link" id="sheetLink" href="#" target="_blank" rel="noopener">→ みんなの実装依頼スプレッドシートを見る</a></p>
+    <p class="hint" style="text-align:left;margin-top:10px;">カードをクリックすると中身を確認できるよ。これはこのブラウザだけの下書き置き場だよ。「実装依頼を出す」を押すと、下書きがスプレッドシートに送られてMOD管理者に見えるようになるよ。合言葉はコードには書いてないので、友達伝いに聞いてね。 <a class="sheet-link" id="sheetLink" href="#" target="_blank" rel="noopener">→ みんなの実装依頼スプレッドシートを見る</a></p>
   </section>
 
   <footer class="note">フォームの入力中身とためたカードリストはこのブラウザ内(localStorage)にのみ保存されるよ。「実装依頼を出す」で送った内容だけがスプレッドシート上の共有データになる。</footer>
@@ -845,10 +860,15 @@ footer.note{margin-top:32px;font-size:12px;color:var(--muted-dim);}
     try{ localStorage.setItem(LIST_KEY, JSON.stringify(list)); }catch(e){}
   }
 
+  const expandedIds = new Set();
+
   function buildListEntry(item){
     const row = document.createElement('div');
-    row.className = 'list-entry';
+    row.className = 'list-entry' + (expandedIds.has(item.id) ? ' expanded' : '');
     row.style.borderLeftColor = item.kind === 'edit' ? 'var(--gold-soft)' : (RARITY_COLOR[item.rarity] || DEFAULT_COLOR);
+
+    const head = document.createElement('div');
+    head.className = 'le-row';
 
     const main = document.createElement('div');
     main.className = 'le-main';
@@ -868,16 +888,42 @@ footer.note{margin-top:32px;font-size:12px;color:var(--muted-dim);}
       : [item.type, 'コスト' + (item.cost || '?'), item.mod].filter(Boolean).join(' / ');
     main.appendChild(name); main.appendChild(meta);
 
+    const actions = document.createElement('div');
+    actions.className = 'le-actions';
+    const chevron = document.createElement('span');
+    chevron.className = 'le-chevron';
+    chevron.textContent = '▸';
+    chevron.setAttribute('aria-hidden', 'true');
     const del = document.createElement('button');
     del.className = 'le-del';
     del.setAttribute('aria-label','このカードを削除');
     del.textContent = '×';
-    del.addEventListener('click', () => {
+    del.addEventListener('click', (e) => {
+      e.stopPropagation();
       const cur = loadList().filter(x => x.id !== item.id);
       saveList(cur);
+      expandedIds.delete(item.id);
       renderList();
     });
-    row.appendChild(main); row.appendChild(del);
+    actions.appendChild(chevron); actions.appendChild(del);
+
+    head.appendChild(main); head.appendChild(actions);
+
+    const detail = document.createElement('div');
+    detail.className = 'le-detail';
+    detail.hidden = !expandedIds.has(item.id);
+    const pre = document.createElement('pre');
+    pre.textContent = buildOutput(item);
+    detail.appendChild(pre);
+
+    head.addEventListener('click', () => {
+      const willExpand = !expandedIds.has(item.id);
+      if(willExpand){ expandedIds.add(item.id); } else { expandedIds.delete(item.id); }
+      row.classList.toggle('expanded', willExpand);
+      detail.hidden = !willExpand;
+    });
+
+    row.appendChild(head); row.appendChild(detail);
     return row;
   }
 
