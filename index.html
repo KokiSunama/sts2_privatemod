@@ -820,12 +820,15 @@ footer.note{margin-top:32px;font-size:12px;color:var(--muted-dim);}
     }
     const author = authorEl.value.trim();
     sendRequestBtn.disabled = true;
+    const sentIds = [];
+    let lastResult = null;
     try{
       for(const item of pending){
-        await fetch(SUBMIT_URL, {
+        const res = await fetch(SUBMIT_URL, {
           method: 'POST',
-          mode: 'no-cors',
-          // text/plain + no-cors で、GAS側のCORS未対応でも送信だけは通す(レスポンスは読まない)
+          // text/plain にするとブラウザのCORSプリフライトを回避できる。
+          // レスポンスはGAS側が実際にAccess-Control-Allow-Originを
+          // 返してくれるので普通に読める(no-corsは不要と確認済み)。
           headers: {'Content-Type': 'text/plain;charset=utf-8'},
           body: JSON.stringify({
             mod: item.mod || '', name: item.name || '', rarity: item.rarity || '', type: item.type || '',
@@ -834,13 +837,32 @@ footer.note{margin-top:32px;font-size:12px;color:var(--muted-dim);}
             submitter: author, passphrase: passphrase
           })
         });
+        let result = null;
+        try{ result = JSON.parse(await res.text()); }catch(e){}
+        lastResult = result;
+        if(result && result.ok){
+          sentIds.push(item.id);
+        } else {
+          break; // 合言葉が違う等で失敗したら、それ以上は送らずに打ち切る
+        }
       }
-      const pendingIds = new Set(pending.map(x => x.id));
-      saveList(loadList().map(x => pendingIds.has(x.id) ? Object.assign({}, x, {submitted: true}) : x));
-      renderList();
-      // 合言葉は送信後に毎回クリア(次も手入力してもらう)
-      passphraseEl.value = '';
-      flashButton(sendRequestBtn, '実装依頼を出す', pending.length + '件送信したよ！');
+
+      if(sentIds.length > 0){
+        const sentIdSet = new Set(sentIds);
+        saveList(loadList().map(x => sentIdSet.has(x.id) ? Object.assign({}, x, {submitted: true}) : x));
+        renderList();
+      }
+
+      if(sentIds.length === pending.length){
+        passphraseEl.value = '';
+        flashButton(sendRequestBtn, '実装依頼を出す', sentIds.length + '件送信したよ！');
+      } else if(lastResult && lastResult.error === 'bad_passphrase'){
+        passphraseEl.value = '';
+        passphraseEl.focus();
+        flashButton(sendRequestBtn, '実装依頼を出す', '合言葉が違うみたい...', 2600);
+      } else {
+        flashButton(sendRequestBtn, '実装依頼を出す', '送信に失敗したよ...', 2600);
+      }
     }catch(err){
       flashButton(sendRequestBtn, '実装依頼を出す', '送信失敗...ネットワーク確認してね', 2600);
     }finally{
