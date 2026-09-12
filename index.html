@@ -822,74 +822,72 @@ footer.note{margin-top:32px;font-size:12px;color:var(--muted-dim);}
     sendRequestBtn.disabled = true;
     // GAS側は遅いと10秒近くかかることがあるので、押した瞬間に分かるよう表示を変える
     sendRequestBtn.textContent = pending.length > 1 ? `送信中(1/${pending.length})…` : '送信中…';
-    const sentIds = [];
-    let lastResult = null;
-    try{
-      for(let i = 0; i < pending.length; i++){
-        const item = pending[i];
-        if(i > 0) sendRequestBtn.textContent = `送信中(${i + 1}/${pending.length})…`;
 
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 25000);
-        let res;
-        try{
-          res = await fetch(SUBMIT_URL, {
-            method: 'POST',
-            // text/plain にするとブラウザのCORSプリフライトを回避できる。
-            // レスポンスはGAS側が実際にAccess-Control-Allow-Originを
-            // 返してくれるので普通に読める(no-corsは不要と確認済み)。
-            headers: {'Content-Type': 'text/plain;charset=utf-8'},
-            body: JSON.stringify({
-              mod: item.mod || '', name: item.name || '', rarity: item.rarity || '', type: item.type || '',
-              cost: item.cost || '', effect: item.effect || '', upgrade: item.upgrade || '',
-              replace: item.replace || '', notes: item.notes || '', art: item.art || '',
-              submitter: author, passphrase: passphrase
-            }),
-            signal: controller.signal
-          });
-        } finally {
-          clearTimeout(timeoutId);
-        }
+    // 1件ずつ送る関数。成功/合言葉違い/その他失敗を区別して返す。
+    // requestId(=カードのローカルID)を毎回送ることで、GAS側が同じIDの
+    // 二重書き込みを防いでくれる → タイムアウト等で「送れたか分からない」
+    // ものを、重複を気にせず安全に再送できる。
+    async function sendOne(item){
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 25000);
+      try{
+        const res = await fetch(SUBMIT_URL, {
+          method: 'POST',
+          headers: {'Content-Type': 'text/plain;charset=utf-8'},
+          body: JSON.stringify({
+            requestId: item.id,
+            mod: item.mod || '', name: item.name || '', rarity: item.rarity || '', type: item.type || '',
+            cost: item.cost || '', effect: item.effect || '', upgrade: item.upgrade || '',
+            replace: item.replace || '', notes: item.notes || '', art: item.art || '',
+            submitter: author, passphrase: passphrase
+          }),
+          signal: controller.signal
+        });
         let result = null;
         try{ result = JSON.parse(await res.text()); }catch(e){}
-        lastResult = result;
-        if(result && result.ok){
-          sentIds.push(item.id);
-        } else {
-          break; // 合言葉が違う等で失敗したら、それ以上は送らずに打ち切る
-        }
+        return result; // {ok:true}, {ok:false,error:'bad_passphrase'}, その他, または null(応答が読めなかった)
+      } catch(err){
+        return null; // タイムアウト/ネットワークエラー → 結果不明として扱う
+      } finally {
+        clearTimeout(timeoutId);
       }
-
-      if(sentIds.length > 0){
-        const sentIdSet = new Set(sentIds);
-        saveList(loadList().map(x => sentIdSet.has(x.id) ? Object.assign({}, x, {submitted: true}) : x));
-        renderList();
-      }
-
-      if(sentIds.length === pending.length){
-        passphraseEl.value = '';
-        flashButton(sendRequestBtn, '実装依頼を出す', sentIds.length + '件送信したよ！');
-      } else if(lastResult && lastResult.error === 'bad_passphrase'){
-        passphraseEl.value = '';
-        passphraseEl.focus();
-        flashButton(sendRequestBtn, '実装依頼を出す', '合言葉が違うみたい...', 2600);
-      } else {
-        flashButton(sendRequestBtn, '実装依頼を出す', '送信に失敗したよ...', 2600);
-      }
-    }catch(err){
-      // タイムアウト等で失敗しても、途中まで送れた分は「送信済み」を反映しておく
-      if(sentIds.length > 0){
-        const sentIdSet = new Set(sentIds);
-        saveList(loadList().map(x => sentIdSet.has(x.id) ? Object.assign({}, x, {submitted: true}) : x));
-        renderList();
-      }
-      const msg = (err && err.name === 'AbortError')
-        ? 'GASの応答が遅すぎるみたい...時間を置いて試してね'
-        : '送信失敗...ネットワーク確認してね';
-      flashButton(sendRequestBtn, '実装依頼を出す', msg, 3200);
-    }finally{
-      sendRequestBtn.disabled = false;
     }
+
+    const sentIds = [];
+    let stoppedForBadPassphrase = false;
+    for(let i = 0; i < pending.length; i++){
+      const item = pending[i];
+      if(i > 0) sendRequestBtn.textContent = `送信中(${i + 1}/${pending.length})…`;
+
+      const result = await sendOne(item);
+      if(result && result.ok){
+        sentIds.push(item.id);
+      } else if(result && result.error === 'bad_passphrase'){
+        stoppedForBadPassphrase = true;
+        break; // 合言葉が違うのは確定なので、それ以上は送らずに打ち切る
+      }
+      // それ以外(結果不明・その他エラー)は送信済みにせず、次のカードへ進む
+    }
+
+    if(sentIds.length > 0){
+      const sentIdSet = new Set(sentIds);
+      saveList(loadList().map(x => sentIdSet.has(x.id) ? Object.assign({}, x, {submitted: true}) : x));
+      renderList();
+    }
+
+    if(stoppedForBadPassphrase){
+      passphraseEl.value = '';
+      passphraseEl.focus();
+      flashButton(sendRequestBtn, '実装依頼を出す', '合言葉が違うみたい...', 2600);
+    } else if(sentIds.length === pending.length){
+      passphraseEl.value = '';
+      flashButton(sendRequestBtn, '実装依頼を出す', sentIds.length + '件送信したよ！');
+    } else if(sentIds.length > 0){
+      flashButton(sendRequestBtn, '実装依頼を出す', `${sentIds.length}/${pending.length}件送信。残りはもう一回押して(重複しても平気だよ)`, 3600);
+    } else {
+      flashButton(sendRequestBtn, '実装依頼を出す', '送信できなかったよ...時間を置いてもう一回試してね', 3200);
+    }
+    sendRequestBtn.disabled = false;
   });
 
   armConfirmButton(clearListBtn, 'クリア', 'もう一度押すと消えるよ', () => {
