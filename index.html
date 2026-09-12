@@ -1,0 +1,841 @@
+<!doctype html>
+<html lang="ja" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>カード設計台</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Yuji+Syuku&family=Zen+Kaku+Gothic+New:wght@400;500;700&family=M+PLUS+1+Code:wght@400;500;600&display=swap">
+<style>
+:root{
+  --void:#12141c;
+  --panel:#1a1e2c;
+  --panel-alt:#20263a;
+  --line:#333a54;
+  --line-soft:#262b40;
+  --ink:#e9e7f2;
+  --muted:#9096b3;
+  --muted-dim:#666c8a;
+  --gold:#cda552;
+  --gold-soft:#8a723f;
+  --ember:#e17845;
+  --verdigris:#54b19a;
+  --arcane:#9a86e6;
+  --ash:#7c82a0;
+  --danger:#d96a63;
+  --parchment:#e9dfc7;
+  --parchment-ink:#2b2416;
+  --parchment-edge:#c8ba91;
+  font-size:15px;
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{
+  background:var(--void);
+  color:var(--ink);
+  font-family:'Zen Kaku Gothic New', sans-serif;
+  line-height:1.7;
+}
+.stage{
+  max-width:1180px;
+  margin:0 auto;
+  padding:40px 24px 80px;
+}
+header{
+  margin-bottom:36px;
+}
+.eyebrow{
+  font-family:'M PLUS 1 Code', monospace;
+  font-size:12px;
+  letter-spacing:.14em;
+  color:var(--gold);
+  text-transform:uppercase;
+}
+h1{
+  font-family:'Yuji Syuku', serif;
+  font-weight:400;
+  font-size:clamp(28px,4vw,42px);
+  margin:6px 0 10px;
+  color:var(--ink);
+  text-wrap:balance;
+}
+header p{
+  color:var(--muted);
+  max-width:60ch;
+  font-size:14px;
+}
+h2{
+  font-family:'Zen Kaku Gothic New', sans-serif;
+  font-weight:700;
+  font-size:16px;
+  margin:0;
+  letter-spacing:.02em;
+}
+.workbench{
+  display:grid;
+  grid-template-columns:1.15fr .85fr;
+  gap:28px;
+  align-items:start;
+}
+@media (max-width:860px){
+  .workbench{grid-template-columns:1fr;}
+}
+.panel{
+  background:var(--panel);
+  border:1px solid var(--line-soft);
+  border-radius:10px;
+  padding:24px;
+}
+.form-panel{display:flex;flex-direction:column;gap:18px;}
+.field{display:flex;flex-direction:column;gap:6px;}
+.field-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+@media (max-width:520px){.field-row{grid-template-columns:1fr;}}
+label{
+  font-size:12px;
+  color:var(--muted);
+  letter-spacing:.04em;
+  display:flex;
+  align-items:baseline;
+  gap:6px;
+}
+label .opt{
+  font-size:10px;
+  color:var(--muted-dim);
+  border:1px solid var(--line);
+  padding:1px 6px;
+  border-radius:20px;
+}
+input[type=text], textarea, select{
+  background:var(--void);
+  border:1px solid var(--line);
+  border-radius:6px;
+  color:var(--ink);
+  padding:10px 12px;
+  font:inherit;
+  font-size:14px;
+  resize:none;
+  overflow:hidden;
+  min-height:42px;
+  width:100%;
+}
+textarea{line-height:1.6;}
+input::placeholder, textarea::placeholder{color:var(--muted-dim);}
+input:focus-visible, textarea:focus-visible, select:focus-visible, button:focus-visible{
+  outline:2px solid var(--gold);
+  outline-offset:1px;
+}
+select{appearance:none;cursor:pointer;}
+.divider{height:1px;background:var(--line-soft);margin:2px 0;}
+.preview-panel{position:sticky;top:24px;display:flex;flex-direction:column;gap:14px;}
+.preview-card{
+  width:100%;
+  max-width:280px;
+  margin:0 auto;
+  aspect-ratio:5/7;
+  border-radius:16px;
+  background:var(--parchment);
+  color:var(--parchment-ink);
+  border:6px solid var(--ash);
+  position:relative;
+  display:flex;
+  flex-direction:column;
+  padding:16px 14px 14px;
+  transition:border-color .25s ease;
+  box-shadow:0 18px 40px -22px rgba(0,0,0,.7);
+}
+@media (prefers-reduced-motion:reduce){.preview-card{transition:none;}}
+.pc-top{display:flex;justify-content:space-between;align-items:flex-start;}
+.pc-cost{
+  width:34px;height:34px;border-radius:50%;
+  background:var(--panel);
+  color:var(--gold);
+  display:flex;align-items:center;justify-content:center;
+  font-family:'M PLUS 1 Code',monospace;
+  font-weight:600;font-size:16px;
+  font-variant-numeric:tabular-nums;
+  border:2px solid var(--parchment-edge);
+}
+.pc-rarity{
+  font-size:10px;
+  letter-spacing:.06em;
+  padding:3px 8px;
+  border-radius:20px;
+  background:rgba(0,0,0,.08);
+  color:var(--parchment-ink);
+  border:1px solid rgba(0,0,0,.15);
+  white-space:nowrap;
+}
+.pc-title{
+  font-family:'Yuji Syuku', serif;
+  font-size:20px;
+  text-align:center;
+  margin:10px 0 4px;
+  text-wrap:balance;
+  min-height:1.3em;
+}
+.pc-type{
+  display:flex;align-items:center;justify-content:center;gap:6px;
+  font-size:11px;color:var(--parchment-ink);opacity:.75;margin-bottom:8px;
+}
+.pc-type .dot{width:8px;height:8px;border-radius:50%;background:var(--ash);flex:none;}
+.pc-body{
+  flex:1;
+  background:rgba(0,0,0,.05);
+  border-radius:8px;
+  padding:10px;
+  font-size:12.5px;
+  overflow-y:auto;
+  white-space:pre-wrap;
+}
+.pc-body .placeholder{opacity:.45;font-style:italic;}
+.pc-upgrade{
+  margin-top:8px;
+  font-size:11.5px;
+  color:#5c4a1e;
+  white-space:pre-wrap;
+}
+.pc-upgrade b{color:var(--gold-soft);}
+.pc-foot{
+  margin-top:8px;
+  font-size:10px;
+  color:rgba(43,36,22,.6);
+  border-top:1px dashed rgba(0,0,0,.15);
+  padding-top:6px;
+  text-align:center;
+}
+.hint{font-size:12px;color:var(--muted-dim);text-align:center;}
+.output-panel, .list-panel{margin-top:24px;}
+.output-head, .list-head{
+  display:flex;justify-content:space-between;align-items:center;gap:12px;
+  margin-bottom:12px;flex-wrap:wrap;
+}
+.list-head h2 span{font-weight:400;color:var(--muted);font-size:13px;margin-left:4px;}
+button{
+  font:inherit;
+  font-size:13px;
+  border-radius:6px;
+  border:1px solid var(--line);
+  background:var(--panel-alt);
+  color:var(--ink);
+  padding:8px 14px;
+  cursor:pointer;
+  transition:background .15s ease, border-color .15s ease;
+}
+@media (prefers-reduced-motion:reduce){button{transition:none;}}
+button:hover{border-color:var(--gold-soft);}
+button.primary{background:var(--gold-soft);border-color:var(--gold-soft);color:#1a1408;font-weight:700;}
+button.primary:hover{background:var(--gold);}
+button.danger{color:var(--danger);}
+button.danger:hover{border-color:var(--danger);}
+button:disabled{opacity:.4;cursor:not-allowed;}
+button:disabled:hover{border-color:var(--line);}
+.btn-row{display:flex;gap:10px;flex-wrap:wrap;}
+#outputText{
+  width:100%;
+  font-family:'M PLUS 1 Code', monospace;
+  font-size:13px;
+  min-height:230px;
+  background:var(--void);
+  color:var(--ink);
+  border:1px solid var(--line);
+  border-radius:8px;
+  padding:16px;
+  white-space:pre;
+  overflow:auto;
+}
+.output-actions{margin-top:12px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;}
+.copy-feedback{font-size:12px;color:var(--verdigris);opacity:0;transition:opacity .2s ease;}
+.copy-feedback.show{opacity:1;}
+.list-body{display:flex;flex-direction:column;gap:16px;}
+.list-body .empty{color:var(--muted-dim);font-size:13px;padding:12px 0;}
+.rarity-group{display:flex;flex-direction:column;gap:8px;}
+.rarity-group h3{
+  font-family:'M PLUS 1 Code',monospace;
+  font-size:12px;
+  color:var(--gold);
+  letter-spacing:.08em;
+  margin:0;
+}
+.list-entry{
+  background:var(--panel-alt);
+  border:1px solid var(--line-soft);
+  border-left:3px solid var(--ash);
+  border-radius:6px;
+  padding:12px 14px;
+  display:flex;
+  justify-content:space-between;
+  gap:10px;
+  font-size:13px;
+}
+.list-entry .le-main{min-width:0;}
+.list-entry .le-name{font-weight:700;}
+.list-entry .le-meta{color:var(--muted);font-size:12px;margin-top:2px;}
+.list-entry .le-del{
+  flex:none;
+  background:transparent;border:none;color:var(--muted-dim);
+  font-size:16px;line-height:1;cursor:pointer;padding:2px 6px;
+}
+.list-entry .le-del:hover{color:var(--danger);}
+.le-tag{
+  font-size:10px;color:var(--verdigris);border:1px solid var(--verdigris);
+  border-radius:20px;padding:1px 7px;margin-left:6px;white-space:nowrap;
+}
+.setup-banner{
+  background:var(--panel-alt);
+  border:1px solid var(--danger);
+  border-radius:8px;
+  padding:14px 16px;
+  font-size:12.5px;
+  color:var(--ink);
+  margin-bottom:24px;
+  line-height:1.7;
+}
+.setup-banner code{
+  font-family:'M PLUS 1 Code',monospace;
+  background:var(--void);
+  padding:1px 5px;
+  border-radius:4px;
+  color:var(--gold);
+}
+.sheet-link{color:var(--gold);text-decoration:underline;text-underline-offset:2px;}
+footer.note{margin-top:32px;font-size:12px;color:var(--muted-dim);}
+</style>
+</head>
+<body>
+<div class="stage">
+  <header>
+    <div class="eyebrow">STS2 MOD / New Card Bench</div>
+    <h1>カード設計台</h1>
+    <p>項目を埋めるとプレビューと書き出しテキストがリアルタイムで更新されるよ。ためたカードは「実装依頼を出す」でスプレッドシートに送れる。</p>
+  </header>
+
+  <div id="setupBanner" class="setup-banner" hidden>
+    ⚠ まだ送信先が設定されてないよ。<code>index.html</code> の下の方にある <code>SUBMIT_URL</code> を、Google Apps Scriptで発行したWebアプリのURLに書き換えてね。設定するまで「実装依頼を出す」は使えないよ(コピー/ダウンロードは今のままOK)。
+  </div>
+
+  <div class="workbench">
+    <section class="panel form-panel">
+      <div class="output-head" style="margin-bottom:2px;">
+        <h2>入力フォーム</h2>
+        <button class="danger" id="clearFormBtn">フォームをクリア</button>
+      </div>
+
+      <div class="field">
+        <label for="f-author">あなたの名前 <span class="opt">任意・依頼一覧に表示</span></label>
+        <input id="f-author" type="text" placeholder="例: くろぴ">
+      </div>
+
+      <div class="field">
+        <label for="f-mod">対象MOD <span class="opt">任意</span></label>
+        <select id="f-mod">
+          <option value="">未選択</option>
+          <option>mule</option>
+          <option>neKro</option>
+          <option>Raven</option>
+          <option>Jacqri</option>
+          <option>Silent ver.2</option>
+          <option>その他</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label for="f-name">名前</label>
+        <input id="f-name" type="text" placeholder="例: 鉛玉">
+      </div>
+
+      <div class="field-row">
+        <div class="field">
+          <label for="f-rarity">レアリティ</label>
+          <input id="f-rarity" type="text" list="dl-rarity" placeholder="コモン">
+          <datalist id="dl-rarity">
+            <option>スターター</option><option>コモン</option><option>アンコモン</option>
+            <option>レア</option><option>エンシェント</option><option>トークン</option>
+            <option>状態異常</option><option>呪い</option>
+          </datalist>
+        </div>
+        <div class="field">
+          <label for="f-type">タイプ</label>
+          <input id="f-type" type="text" list="dl-type" placeholder="アタック">
+          <datalist id="dl-type">
+            <option>アタック</option><option>スキル</option><option>パワー</option>
+            <option>ステータス</option><option>カース</option>
+          </datalist>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="f-cost">コスト</label>
+        <input id="f-cost" type="text" placeholder="0 / 1 / X など">
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="field">
+        <label for="f-effect">効果</label>
+        <textarea id="f-effect" rows="3" placeholder="このターンにプレイした枚数に等しいブロックを得る。"></textarea>
+      </div>
+
+      <div class="field">
+        <label for="f-upgrade">アップグレード時</label>
+        <textarea id="f-upgrade" rows="2" placeholder="例: 追加でブロック+3"></textarea>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="field">
+        <label for="f-replace">差し替え元 <span class="opt">任意</span></label>
+        <input id="f-replace" type="text" placeholder="例: 無力化(新規カードなら空欄でOK)">
+      </div>
+
+      <div class="field">
+        <label for="f-notes">備考</label>
+        <textarea id="f-notes" rows="2" placeholder="バランス調整の意図、参考カードなど"></textarea>
+      </div>
+
+      <div class="field">
+        <label for="f-art">画像</label>
+        <input id="f-art" type="text" placeholder="参考ファイル名 or イラストのイメージ">
+      </div>
+    </section>
+
+    <aside class="preview-panel">
+      <div class="panel" style="padding:20px 16px;">
+        <div class="preview-card" id="previewCard">
+          <div class="pc-top">
+            <div class="pc-cost" id="pcCost">0</div>
+            <div class="pc-rarity" id="pcRarity">コモン</div>
+          </div>
+          <div class="pc-title" id="pcTitle">(カード名)</div>
+          <div class="pc-type"><span class="dot" id="pcDot"></span><span id="pcType">タイプ未設定</span></div>
+          <div class="pc-body"><span id="pcEffect" class="placeholder">効果テキストがここに表示されるよ</span></div>
+          <div class="pc-upgrade" id="pcUpgrade" style="display:none;"></div>
+          <div class="pc-foot" id="pcFoot" style="display:none;"></div>
+        </div>
+      </div>
+      <p class="hint">※あくまでイメージ。実際の見た目はゲーム内で確認してね</p>
+    </aside>
+  </div>
+
+  <section class="panel output-panel">
+    <div class="output-head">
+      <h2>書き出しテキスト</h2>
+      <div class="btn-row">
+        <button class="primary" id="copyBtn">コピー</button>
+        <span class="copy-feedback" id="copyFeedback">コピーしたよ！</span>
+      </div>
+    </div>
+    <textarea id="outputText" readonly></textarea>
+    <div class="output-actions">
+      <span class="hint" style="text-align:left;">この1枚だけならコピペでOK。まとめてダウンロード/依頼したいときは下のカードリストを使ってね</span>
+      <button id="addToListBtn">＋ カードリストに追加</button>
+    </div>
+  </section>
+
+  <section class="panel list-panel">
+    <div class="list-head">
+      <h2>ためたカードリスト<span id="listCount">(0件)</span></h2>
+      <div class="btn-row">
+        <button id="copyListBtn">全部コピー</button>
+        <button id="downloadListBtn">⇩ ダウンロード</button>
+        <button class="primary" id="sendRequestBtn">実装依頼を出す</button>
+        <button class="danger" id="clearListBtn">クリア</button>
+      </div>
+    </div>
+    <div id="listBody" class="list-body"><p class="empty">まだ追加されてないよ。フォームを埋めて「カードリストに追加」を押してね</p></div>
+    <p class="hint" style="text-align:left;margin-top:10px;">これはこのブラウザだけの下書き置き場だよ。「実装依頼を出す」を押すと、下書きがスプレッドシートに送られてMOD管理者に見えるようになるよ。 <a class="sheet-link" id="sheetLink" href="#" target="_blank" rel="noopener">→ みんなの実装依頼スプレッドシートを見る</a></p>
+  </section>
+
+  <footer class="note">フォームの入力中身とためたカードリストはこのブラウザ内(localStorage)にのみ保存されるよ。「実装依頼を出す」で送った内容だけがスプレッドシート上の共有データになる。</footer>
+</div>
+
+<script>
+(function(){
+  // ▼▼▼ ここをGoogle Apps Scriptのデプロイ後に書き換えてね ▼▼▼
+  const SUBMIT_URL = 'PASTE_YOUR_GAS_WEB_APP_URL_HERE';
+  const SHEET_VIEW_URL = 'PASTE_YOUR_GOOGLE_SHEET_SHARE_URL_HERE';
+  // ▲▲▲ ここまで ▲▲▲
+
+  const RARITY_ORDER = ['スターター','コモン','アンコモン','レア','エンシェント','トークン','状態異常','呪い'];
+  const RARITY_COLOR = {
+    'スターター':'#8a7a5c','コモン':'#7c8299','アンコモン':'#6f9fd6','レア':'#cda552',
+    'エンシェント':'#6f8f7a','トークン':'#9a7ecf','状態異常':'#757b8f','呪い':'#6b4a7a'
+  };
+  const TYPE_COLOR = {
+    'アタック':'#e17845','スキル':'#54b19a','パワー':'#9a86e6',
+    'ステータス':'#7c82a0','カース':'#6b4a7a'
+  };
+  const DEFAULT_COLOR = '#7c82a0';
+
+  const ids = ['mod','name','rarity','type','cost','effect','upgrade','replace','notes','art'];
+  const el = {};
+  ids.forEach(id => el[id] = document.getElementById('f-'+id));
+
+  const outputText = document.getElementById('outputText');
+  const copyBtn = document.getElementById('copyBtn');
+  const copyFeedback = document.getElementById('copyFeedback');
+  const addToListBtn = document.getElementById('addToListBtn');
+  const listBody = document.getElementById('listBody');
+  const listCount = document.getElementById('listCount');
+  const copyListBtn = document.getElementById('copyListBtn');
+  const downloadListBtn = document.getElementById('downloadListBtn');
+  const sendRequestBtn = document.getElementById('sendRequestBtn');
+  const clearListBtn = document.getElementById('clearListBtn');
+  const authorEl = document.getElementById('f-author');
+  const setupBanner = document.getElementById('setupBanner');
+  const sheetLink = document.getElementById('sheetLink');
+
+  const pcCost = document.getElementById('pcCost');
+  const pcRarity = document.getElementById('pcRarity');
+  const pcTitle = document.getElementById('pcTitle');
+  const pcType = document.getElementById('pcType');
+  const pcDot = document.getElementById('pcDot');
+  const pcEffect = document.getElementById('pcEffect');
+  const pcUpgrade = document.getElementById('pcUpgrade');
+  const pcFoot = document.getElementById('pcFoot');
+  const previewCard = document.getElementById('previewCard');
+
+  const DRAFT_KEY = 'sts2CardFormDraft';
+  const LIST_KEY = 'sts2CardFormList';
+  const AUTHOR_KEY = 'sts2CardFormAuthor';
+
+  const isConfigured = !SUBMIT_URL.startsWith('PASTE_');
+  if(!isConfigured){
+    setupBanner.hidden = false;
+    sendRequestBtn.disabled = true;
+    sendRequestBtn.title = 'SUBMIT_URLが未設定だよ';
+  }
+  if(!SHEET_VIEW_URL.startsWith('PASTE_')){
+    sheetLink.href = SHEET_VIEW_URL;
+  } else {
+    sheetLink.style.display = 'none';
+  }
+
+  try{ authorEl.value = localStorage.getItem(AUTHOR_KEY) || ''; }catch(e){}
+  authorEl.addEventListener('input', () => {
+    try{ localStorage.setItem(AUTHOR_KEY, authorEl.value); }catch(e){}
+  });
+
+  function tsFile(t){
+    const d = new Date(t);
+    const p = n => String(n).padStart(2,'0');
+    return d.getFullYear() + p(d.getMonth()+1) + p(d.getDate()) + '_' + p(d.getHours()) + p(d.getMinutes());
+  }
+  function flashButton(btn, defaultLabel, tempLabel, ms){
+    btn.textContent = tempLabel;
+    setTimeout(() => { btn.textContent = defaultLabel; }, ms || 1800);
+  }
+  function groupByRarity(list){
+    const groups = {};
+    const order = [];
+    list.forEach(item => {
+      const key = item.rarity || 'その他';
+      if(!groups[key]){ groups[key] = []; order.push(key); }
+      groups[key].push(item);
+    });
+    order.sort((a,b) => {
+      const ia = RARITY_ORDER.indexOf(a); const ib = RARITY_ORDER.indexOf(b);
+      if(ia === -1 && ib === -1) return order.indexOf(a) - order.indexOf(b);
+      if(ia === -1) return 1;
+      if(ib === -1) return -1;
+      return ia - ib;
+    });
+    return { groups, order };
+  }
+  function buildListText(list){
+    if(list.length === 0) return '';
+    const { groups, order } = groupByRarity(list);
+    const chunks = [];
+    order.forEach(key => {
+      chunks.push('【' + key + '】\n');
+      groups[key].forEach(item => chunks.push(buildOutput(item) + '\n'));
+    });
+    return chunks.join('\n').trim();
+  }
+
+  function readForm(){
+    const data = {};
+    ids.forEach(id => data[id] = el[id].value.trim());
+    return data;
+  }
+
+  function autoGrow(t){
+    t.style.height = 'auto';
+    t.style.height = (t.scrollHeight + 2) + 'px';
+  }
+
+  function buildOutput(d){
+    const lines = [];
+    if(d.mod) lines.push('# 対象MOD: ' + d.mod);
+    lines.push('名前:' + d.name);
+    lines.push('レアリティ:' + d.rarity);
+    lines.push('タイプ:' + d.type);
+    lines.push('コスト:' + d.cost);
+    lines.push('効果:' + d.effect);
+    lines.push('アップグレード時:' + d.upgrade);
+    lines.push('差し替え元:' + d.replace);
+    lines.push('備考:' + d.notes);
+    lines.push('画像:' + d.art);
+    return lines.join('\n');
+  }
+
+  function renderPreview(d){
+    const rColor = RARITY_COLOR[d.rarity] || DEFAULT_COLOR;
+    const tColor = TYPE_COLOR[d.type] || DEFAULT_COLOR;
+    previewCard.style.borderColor = rColor;
+    pcCost.textContent = d.cost || '0';
+    pcRarity.textContent = d.rarity || 'レアリティ未設定';
+    pcRarity.style.background = rColor + '33';
+    pcTitle.textContent = d.name || '(カード名)';
+    pcType.textContent = d.type || 'タイプ未設定';
+    pcDot.style.background = tColor;
+
+    if(d.effect){
+      pcEffect.textContent = d.effect;
+      pcEffect.classList.remove('placeholder');
+    } else {
+      pcEffect.textContent = '効果テキストがここに表示されるよ';
+      pcEffect.classList.add('placeholder');
+    }
+
+    if(d.upgrade){
+      pcUpgrade.style.display = '';
+      pcUpgrade.innerHTML = '<b>↑アップグレード:</b> ' + d.upgrade.replace(/</g,'&lt;');
+    } else {
+      pcUpgrade.style.display = 'none';
+    }
+
+    if(d.replace){
+      pcFoot.style.display = '';
+      pcFoot.textContent = '差し替え元: ' + d.replace;
+    } else {
+      pcFoot.style.display = 'none';
+    }
+  }
+
+  function saveDraft(d){
+    try{ localStorage.setItem(DRAFT_KEY, JSON.stringify(d)); }catch(e){}
+  }
+  function loadDraft(){
+    try{
+      const raw = localStorage.getItem(DRAFT_KEY);
+      if(!raw) return;
+      const d = JSON.parse(raw);
+      ids.forEach(id => { if(d[id]) el[id].value = d[id]; });
+    }catch(e){}
+  }
+
+  function update(){
+    const d = readForm();
+    renderPreview(d);
+    outputText.value = buildOutput(d);
+    saveDraft(d);
+  }
+
+  ids.forEach(id => {
+    const node = el[id];
+    const evt = (node.tagName === 'SELECT') ? 'change' : 'input';
+    node.addEventListener(evt, () => {
+      if(node.tagName === 'TEXTAREA') autoGrow(node);
+      update();
+    });
+  });
+
+  function flashCopied(){
+    copyFeedback.classList.add('show');
+    setTimeout(() => copyFeedback.classList.remove('show'), 1600);
+  }
+
+  function copyText(text){
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(text).then(flashCopied).catch(() => fallbackCopy(text));
+    } else {
+      fallbackCopy(text);
+    }
+  }
+  function fallbackCopy(text){
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    try{ document.execCommand('copy'); flashCopied(); }catch(e){}
+    document.body.removeChild(ta);
+  }
+
+  copyBtn.addEventListener('click', () => copyText(outputText.value));
+
+  function armConfirmButton(btn, defaultLabel, confirmLabel, onConfirm){
+    let armed = false;
+    let timer = null;
+    btn.addEventListener('click', () => {
+      if(!armed){
+        armed = true;
+        btn.textContent = confirmLabel;
+        timer = setTimeout(() => { armed = false; btn.textContent = defaultLabel; }, 3000);
+        return;
+      }
+      clearTimeout(timer);
+      armed = false;
+      btn.textContent = defaultLabel;
+      onConfirm();
+    });
+  }
+
+  armConfirmButton(document.getElementById('clearFormBtn'), 'フォームをクリア', 'もう一度押すと消えるよ', () => {
+    ids.forEach(id => {
+      if(id === 'mod') return;
+      el[id].value = '';
+      if(el[id].tagName === 'TEXTAREA') autoGrow(el[id]);
+    });
+    update();
+    el.name.focus();
+  });
+
+  function loadList(){
+    try{ return JSON.parse(localStorage.getItem(LIST_KEY) || '[]'); }catch(e){ return []; }
+  }
+  function saveList(list){
+    try{ localStorage.setItem(LIST_KEY, JSON.stringify(list)); }catch(e){}
+  }
+
+  function renderList(){
+    const list = loadList();
+    listCount.textContent = '(' + list.length + '件)';
+    if(list.length === 0){
+      listBody.innerHTML = '<p class="empty">まだ追加されてないよ。フォームを埋めて「カードリストに追加」を押してね</p>';
+      return;
+    }
+    const { groups, order } = groupByRarity(list);
+
+    listBody.innerHTML = '';
+    order.forEach(key => {
+      const g = document.createElement('div');
+      g.className = 'rarity-group';
+      const h = document.createElement('h3');
+      h.textContent = '【' + key + '】';
+      g.appendChild(h);
+      groups[key].forEach(item => {
+        const row = document.createElement('div');
+        row.className = 'list-entry';
+        row.style.borderLeftColor = RARITY_COLOR[item.rarity] || DEFAULT_COLOR;
+        const main = document.createElement('div');
+        main.className = 'le-main';
+        const name = document.createElement('div');
+        name.className = 'le-name';
+        name.textContent = item.name || '(名前未設定)';
+        if(item.submitted){
+          const tag = document.createElement('span');
+          tag.className = 'le-tag';
+          tag.textContent = '送信済み';
+          name.appendChild(tag);
+        }
+        const meta = document.createElement('div');
+        meta.className = 'le-meta';
+        meta.textContent = [item.type, 'コスト' + (item.cost || '?'), item.mod].filter(Boolean).join(' / ');
+        main.appendChild(name); main.appendChild(meta);
+        const del = document.createElement('button');
+        del.className = 'le-del';
+        del.setAttribute('aria-label','このカードを削除');
+        del.textContent = '×';
+        del.addEventListener('click', () => {
+          const cur = loadList().filter(x => x.id !== item.id);
+          saveList(cur);
+          renderList();
+        });
+        row.appendChild(main); row.appendChild(del);
+        g.appendChild(row);
+      });
+      listBody.appendChild(g);
+    });
+  }
+
+  addToListBtn.addEventListener('click', () => {
+    const d = readForm();
+    if(!d.name){
+      el.name.focus();
+      return;
+    }
+    const list = loadList();
+    d.id = Date.now() + '-' + Math.random().toString(36).slice(2,7);
+    list.push(d);
+    saveList(list);
+    renderList();
+  });
+
+  copyListBtn.addEventListener('click', () => {
+    const list = loadList();
+    if(list.length === 0) return;
+    copyText(buildListText(list));
+  });
+
+  downloadListBtn.addEventListener('click', () => {
+    const list = loadList();
+    if(list.length === 0) return;
+    const text = buildListText(list);
+    const blob = new Blob([text], {type: 'text/plain;charset=utf-8'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'sts2cards_' + tsFile(Date.now()) + '.txt';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+    flashButton(downloadListBtn, '⇩ ダウンロード', '保存したよ！');
+  });
+
+  sendRequestBtn.addEventListener('click', async () => {
+    if(!isConfigured){
+      flashButton(sendRequestBtn, '実装依頼を出す', 'まだ設定できてないよ', 2200);
+      return;
+    }
+    const list = loadList();
+    const pending = list.filter(x => !x.submitted);
+    if(pending.length === 0){
+      flashButton(sendRequestBtn, '実装依頼を出す', list.length ? '全部送信済みだよ' : '先にカードを追加してね');
+      return;
+    }
+    const author = authorEl.value.trim();
+    sendRequestBtn.disabled = true;
+    try{
+      for(const item of pending){
+        await fetch(SUBMIT_URL, {
+          method: 'POST',
+          mode: 'no-cors',
+          // text/plain + no-cors で、GAS側のCORS未対応でも送信だけは通す(レスポンスは読まない)
+          headers: {'Content-Type': 'text/plain;charset=utf-8'},
+          body: JSON.stringify({
+            mod: item.mod || '', name: item.name || '', rarity: item.rarity || '', type: item.type || '',
+            cost: item.cost || '', effect: item.effect || '', upgrade: item.upgrade || '',
+            replace: item.replace || '', notes: item.notes || '', art: item.art || '',
+            submitter: author
+          })
+        });
+      }
+      const pendingIds = new Set(pending.map(x => x.id));
+      saveList(loadList().map(x => pendingIds.has(x.id) ? Object.assign({}, x, {submitted: true}) : x));
+      renderList();
+      flashButton(sendRequestBtn, '実装依頼を出す', pending.length + '件送信したよ！');
+    }catch(err){
+      flashButton(sendRequestBtn, '実装依頼を出す', '送信失敗...ネットワーク確認してね', 2600);
+    }finally{
+      sendRequestBtn.disabled = false;
+    }
+  });
+
+  armConfirmButton(clearListBtn, 'クリア', 'もう一度押すと消えるよ', () => {
+    if(loadList().length === 0) return;
+    saveList([]);
+    renderList();
+  });
+
+  loadDraft();
+  ids.forEach(id => { if(el[id].tagName === 'TEXTAREA') autoGrow(el[id]); });
+  update();
+  renderList();
+})();
+</script>
+</body>
+</html>
