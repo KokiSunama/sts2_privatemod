@@ -88,6 +88,29 @@ h2{
   padding:24px;
 }
 .form-panel{display:flex;flex-direction:column;gap:18px;}
+.mode-tabs{
+  display:flex;gap:4px;
+  background:var(--void);
+  border:1px solid var(--line);
+  border-radius:9px;
+  padding:4px;
+}
+.mode-tabs .mode-tab{
+  flex:1;
+  background:transparent;
+  border:1px solid transparent;
+  border-radius:6px;
+  padding:9px 10px;
+  font-size:13px;
+  color:var(--muted);
+}
+.mode-tabs .mode-tab:hover{color:var(--ink);border-color:transparent;}
+.mode-tabs .mode-tab.active{
+  background:var(--gold-soft);
+  color:#1a1408;
+  font-weight:700;
+}
+.mode-tabs .mode-tab.active:hover{background:var(--gold);}
 .field{display:flex;flex-direction:column;gap:6px;}
 .field-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
 @media (max-width:520px){.field-row{grid-template-columns:1fr;}}
@@ -205,6 +228,24 @@ select{appearance:none;cursor:pointer;}
   text-align:center;
 }
 .hint{font-size:12px;color:var(--muted-dim);text-align:center;}
+.edit-note{
+  border-left:3px solid var(--gold-soft);
+  display:flex;flex-direction:column;gap:10px;
+}
+.edit-note-tag{
+  font-family:'M PLUS 1 Code',monospace;
+  font-size:11px;color:var(--gold);letter-spacing:.04em;
+}
+.edit-note-title{
+  font-family:'Yuji Syuku', serif;
+  font-size:20px;color:var(--ink);text-wrap:balance;
+}
+.edit-note-body{
+  font-size:13px;color:var(--ink);line-height:1.7;white-space:pre-wrap;
+  background:var(--void);border:1px solid var(--line-soft);border-radius:8px;
+  padding:12px;min-height:140px;
+}
+.edit-note-body .placeholder{opacity:.45;font-style:italic;}
 .output-panel, .list-panel{margin-top:24px;}
 .output-head, .list-head{
   display:flex;justify-content:space-between;align-items:center;gap:12px;
@@ -312,7 +353,7 @@ footer.note{margin-top:32px;font-size:12px;color:var(--muted-dim);}
   <header>
     <div class="eyebrow">STS2 MOD / New Card Bench</div>
     <h1>カード設計台</h1>
-    <p>項目を埋めるとプレビューと書き出しテキストがリアルタイムで更新されるよ。ためたカードは「実装依頼を出す」でスプレッドシートに送れる。</p>
+    <p>「新規カード追加」は項目を埋めるとプレビューと書き出しテキストがリアルタイムで更新されるよ。「既存カード修正」は対象MODとカード名だけ指定して、あとはフリーフォームで書けばOK。ためたカードは「実装依頼を出す」でスプレッドシートに送れる。</p>
   </header>
 
   <div id="setupBanner" class="setup-banner" hidden>
@@ -326,13 +367,18 @@ footer.note{margin-top:32px;font-size:12px;color:var(--muted-dim);}
         <button class="danger" id="clearFormBtn">フォームをクリア</button>
       </div>
 
+      <div class="mode-tabs" role="tablist" aria-label="入力モード">
+        <button type="button" class="mode-tab active" id="tabNew" data-mode="new">＋ 新規カード追加</button>
+        <button type="button" class="mode-tab" id="tabEdit" data-mode="edit">✎ 既存カード修正</button>
+      </div>
+
       <div class="field">
         <label for="f-author">あなたの名前 <span class="opt">任意・依頼一覧に表示</span></label>
         <input id="f-author" type="text" placeholder="例: くろぴ">
       </div>
 
       <div class="field">
-        <label for="f-mod">対象MOD <span class="opt">任意</span></label>
+        <label for="f-mod">対象MOD <span class="opt" id="modOpt">任意</span></label>
         <select id="f-mod">
           <option value="">未選択</option>
           <option>mule</option>
@@ -345,67 +391,77 @@ footer.note{margin-top:32px;font-size:12px;color:var(--muted-dim);}
       </div>
 
       <div class="field">
-        <label for="f-name">名前</label>
+        <label for="f-name" id="nameLabel">名前</label>
         <input id="f-name" type="text" placeholder="例: 鉛玉">
       </div>
 
-      <div class="field-row">
-        <div class="field">
-          <label for="f-rarity">レアリティ</label>
-          <input id="f-rarity" type="text" list="dl-rarity" placeholder="コモン">
-          <datalist id="dl-rarity">
-            <option>スターター</option><option>コモン</option><option>アンコモン</option>
-            <option>レア</option><option>エンシェント</option><option>トークン</option>
-            <option>状態異常</option><option>呪い</option>
-          </datalist>
+      <div id="newFields">
+        <div class="field-row">
+          <div class="field">
+            <label for="f-rarity">レアリティ</label>
+            <input id="f-rarity" type="text" list="dl-rarity" placeholder="コモン">
+            <datalist id="dl-rarity">
+              <option>スターター</option><option>コモン</option><option>アンコモン</option>
+              <option>レア</option><option>エンシェント</option><option>トークン</option>
+              <option>状態異常</option><option>呪い</option>
+            </datalist>
+          </div>
+          <div class="field">
+            <label for="f-type">タイプ</label>
+            <input id="f-type" type="text" list="dl-type" placeholder="アタック">
+            <datalist id="dl-type">
+              <option>アタック</option><option>スキル</option><option>パワー</option>
+              <option>ステータス</option><option>カース</option>
+            </datalist>
+          </div>
         </div>
+
         <div class="field">
-          <label for="f-type">タイプ</label>
-          <input id="f-type" type="text" list="dl-type" placeholder="アタック">
-          <datalist id="dl-type">
-            <option>アタック</option><option>スキル</option><option>パワー</option>
-            <option>ステータス</option><option>カース</option>
-          </datalist>
+          <label for="f-cost">コスト</label>
+          <input id="f-cost" type="text" placeholder="0 / 1 / X など">
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="field">
+          <label for="f-effect">効果</label>
+          <textarea id="f-effect" rows="3" placeholder="このターンにプレイした枚数に等しいブロックを得る。"></textarea>
+        </div>
+
+        <div class="field">
+          <label for="f-upgrade">アップグレード時</label>
+          <textarea id="f-upgrade" rows="2" placeholder="例: 追加でブロック+3"></textarea>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="field">
+          <label for="f-replace">差し替え元 <span class="opt">任意</span></label>
+          <input id="f-replace" type="text" placeholder="例: 無力化(新規カードなら空欄でOK)">
+        </div>
+
+        <div class="field">
+          <label for="f-notes">備考</label>
+          <textarea id="f-notes" rows="2" placeholder="バランス調整の意図、参考カードなど"></textarea>
+        </div>
+
+        <div class="field">
+          <label for="f-art">画像</label>
+          <input id="f-art" type="text" placeholder="参考ファイル名 or イラストのイメージ">
         </div>
       </div>
 
-      <div class="field">
-        <label for="f-cost">コスト</label>
-        <input id="f-cost" type="text" placeholder="0 / 1 / X など">
-      </div>
-
-      <div class="divider"></div>
-
-      <div class="field">
-        <label for="f-effect">効果</label>
-        <textarea id="f-effect" rows="3" placeholder="このターンにプレイした枚数に等しいブロックを得る。"></textarea>
-      </div>
-
-      <div class="field">
-        <label for="f-upgrade">アップグレード時</label>
-        <textarea id="f-upgrade" rows="2" placeholder="例: 追加でブロック+3"></textarea>
-      </div>
-
-      <div class="divider"></div>
-
-      <div class="field">
-        <label for="f-replace">差し替え元 <span class="opt">任意</span></label>
-        <input id="f-replace" type="text" placeholder="例: 無力化(新規カードなら空欄でOK)">
-      </div>
-
-      <div class="field">
-        <label for="f-notes">備考</label>
-        <textarea id="f-notes" rows="2" placeholder="バランス調整の意図、参考カードなど"></textarea>
-      </div>
-
-      <div class="field">
-        <label for="f-art">画像</label>
-        <input id="f-art" type="text" placeholder="参考ファイル名 or イラストのイメージ">
+      <div id="editFields" hidden>
+        <div class="divider"></div>
+        <div class="field">
+          <label for="f-content">修正内容</label>
+          <textarea id="f-content" rows="10" placeholder="例:&#10;効果を「3ダメージを与える」→「4ダメージを与える」に変更してほしい。&#10;理由: 現状だと弱すぎてピックされない。&#10;アップグレード後の数値も合わせて調整してもらえると助かる。"></textarea>
+        </div>
       </div>
     </section>
 
     <aside class="preview-panel">
-      <div class="panel" style="padding:20px 16px;">
+      <div class="panel" style="padding:20px 16px;" id="previewCardWrap">
         <div class="preview-card" id="previewCard">
           <div class="pc-top">
             <div class="pc-cost" id="pcCost">0</div>
@@ -417,6 +473,11 @@ footer.note{margin-top:32px;font-size:12px;color:var(--muted-dim);}
           <div class="pc-upgrade" id="pcUpgrade" style="display:none;"></div>
           <div class="pc-foot" id="pcFoot" style="display:none;"></div>
         </div>
+      </div>
+      <div class="panel edit-note" id="editPreview" hidden>
+        <div class="edit-note-tag" id="enMod">対象MOD未選択</div>
+        <div class="edit-note-title" id="enTitle">(カード名)</div>
+        <div class="edit-note-body"><span id="enContent" class="placeholder">修正内容がここに表示されるよ</span></div>
       </div>
       <p class="hint">※あくまでイメージ。実際の見た目はゲーム内で確認してね</p>
     </aside>
@@ -481,9 +542,24 @@ footer.note{margin-top:32px;font-size:12px;color:var(--muted-dim);}
   };
   const DEFAULT_COLOR = '#7c82a0';
 
-  const ids = ['mod','name','rarity','type','cost','effect','upgrade','replace','notes','art'];
+  const NEW_ONLY_IDS = ['rarity','type','cost','effect','upgrade','replace','notes','art'];
+  const EDIT_ONLY_IDS = ['content'];
+  const ids = ['mod','name'].concat(NEW_ONLY_IDS, EDIT_ONLY_IDS);
   const el = {};
   ids.forEach(id => el[id] = document.getElementById('f-'+id));
+
+  let mode = 'new';
+  const tabNew = document.getElementById('tabNew');
+  const tabEdit = document.getElementById('tabEdit');
+  const newFieldsEl = document.getElementById('newFields');
+  const editFieldsEl = document.getElementById('editFields');
+  const nameLabel = document.getElementById('nameLabel');
+  const modOpt = document.getElementById('modOpt');
+  const previewCardWrap = document.getElementById('previewCardWrap');
+  const editPreview = document.getElementById('editPreview');
+  const enMod = document.getElementById('enMod');
+  const enTitle = document.getElementById('enTitle');
+  const enContent = document.getElementById('enContent');
 
   const outputText = document.getElementById('outputText');
   const copyBtn = document.getElementById('copyBtn');
@@ -557,19 +633,52 @@ footer.note{margin-top:32px;font-size:12px;color:var(--muted-dim);}
     });
     return { groups, order };
   }
+  // 新規カード(レアリティ別)と修正依頼(フラット)に分けて並べる
+  function groupForDisplay(list){
+    const newItems = list.filter(x => x.kind !== 'edit');
+    const editItems = list.filter(x => x.kind === 'edit');
+    const { groups, order } = groupByRarity(newItems);
+    return { newGroups: groups, newOrder: order, editItems };
+  }
   function buildListText(list){
     if(list.length === 0) return '';
-    const { groups, order } = groupByRarity(list);
+    const { newGroups, newOrder, editItems } = groupForDisplay(list);
     const chunks = [];
-    order.forEach(key => {
-      chunks.push('【' + key + '】\n');
-      groups[key].forEach(item => chunks.push(buildOutput(item) + '\n'));
+    newOrder.forEach(key => {
+      chunks.push('【新規/' + key + '】\n');
+      newGroups[key].forEach(item => chunks.push(buildOutput(item) + '\n'));
     });
+    if(editItems.length > 0){
+      chunks.push('【修正依頼】\n');
+      editItems.forEach(item => chunks.push(buildOutput(item) + '\n'));
+    }
     return chunks.join('\n').trim();
   }
 
+  function applyModeUI(newMode){
+    mode = newMode;
+    const isEdit = mode === 'edit';
+    tabNew.classList.toggle('active', !isEdit);
+    tabEdit.classList.toggle('active', isEdit);
+    newFieldsEl.hidden = isEdit;
+    editFieldsEl.hidden = !isEdit;
+    previewCardWrap.hidden = isEdit;
+    editPreview.hidden = !isEdit;
+    nameLabel.textContent = isEdit ? 'カード名' : '名前';
+    el.name.placeholder = isEdit ? '例: 鉛玉(既存カードの正式名)' : '例: 鉛玉';
+    modOpt.style.display = isEdit ? 'none' : '';
+  }
+  function setMode(newMode){
+    if(mode === newMode) return;
+    applyModeUI(newMode);
+    (newMode === 'edit' ? NEW_ONLY_IDS : EDIT_ONLY_IDS).forEach(id => { el[id].value = ''; });
+    update();
+  }
+  tabNew.addEventListener('click', () => setMode('new'));
+  tabEdit.addEventListener('click', () => setMode('edit'));
+
   function readForm(){
-    const data = {};
+    const data = { kind: mode };
     ids.forEach(id => data[id] = el[id].value.trim());
     return data;
   }
@@ -582,6 +691,13 @@ footer.note{margin-top:32px;font-size:12px;color:var(--muted-dim);}
   function buildOutput(d){
     const lines = [];
     if(d.mod) lines.push('# 対象MOD: ' + d.mod);
+    if(d.kind === 'edit'){
+      lines.push('種別:既存カード修正');
+      lines.push('カード名:' + d.name);
+      lines.push('修正内容:');
+      lines.push(d.content || '');
+      return lines.join('\n');
+    }
     lines.push('名前:' + d.name);
     lines.push('レアリティ:' + d.rarity);
     lines.push('タイプ:' + d.type);
@@ -595,6 +711,18 @@ footer.note{margin-top:32px;font-size:12px;color:var(--muted-dim);}
   }
 
   function renderPreview(d){
+    if(d.kind === 'edit'){
+      enMod.textContent = d.mod ? '対象MOD: ' + d.mod : '対象MOD未選択';
+      enTitle.textContent = d.name || '(カード名)';
+      if(d.content){
+        enContent.textContent = d.content;
+        enContent.classList.remove('placeholder');
+      } else {
+        enContent.textContent = '修正内容がここに表示されるよ';
+        enContent.classList.add('placeholder');
+      }
+      return;
+    }
     const rColor = RARITY_COLOR[d.rarity] || DEFAULT_COLOR;
     const tColor = TYPE_COLOR[d.type] || DEFAULT_COLOR;
     previewCard.style.borderColor = rColor;
@@ -636,6 +764,7 @@ footer.note{margin-top:32px;font-size:12px;color:var(--muted-dim);}
       const raw = localStorage.getItem(DRAFT_KEY);
       if(!raw) return;
       const d = JSON.parse(raw);
+      if(d.kind) applyModeUI(d.kind);
       ids.forEach(id => { if(d[id]) el[id].value = d[id]; });
     }catch(e){}
   }
@@ -715,6 +844,42 @@ footer.note{margin-top:32px;font-size:12px;color:var(--muted-dim);}
     try{ localStorage.setItem(LIST_KEY, JSON.stringify(list)); }catch(e){}
   }
 
+  function buildListEntry(item){
+    const row = document.createElement('div');
+    row.className = 'list-entry';
+    row.style.borderLeftColor = item.kind === 'edit' ? 'var(--gold-soft)' : (RARITY_COLOR[item.rarity] || DEFAULT_COLOR);
+
+    const main = document.createElement('div');
+    main.className = 'le-main';
+    const name = document.createElement('div');
+    name.className = 'le-name';
+    name.textContent = item.name || '(名前未設定)';
+    if(item.submitted){
+      const tag = document.createElement('span');
+      tag.className = 'le-tag';
+      tag.textContent = '送信済み';
+      name.appendChild(tag);
+    }
+    const meta = document.createElement('div');
+    meta.className = 'le-meta';
+    meta.textContent = item.kind === 'edit'
+      ? ['修正依頼', item.mod].filter(Boolean).join(' / ')
+      : [item.type, 'コスト' + (item.cost || '?'), item.mod].filter(Boolean).join(' / ');
+    main.appendChild(name); main.appendChild(meta);
+
+    const del = document.createElement('button');
+    del.className = 'le-del';
+    del.setAttribute('aria-label','このカードを削除');
+    del.textContent = '×';
+    del.addEventListener('click', () => {
+      const cur = loadList().filter(x => x.id !== item.id);
+      saveList(cur);
+      renderList();
+    });
+    row.appendChild(main); row.appendChild(del);
+    return row;
+  }
+
   function renderList(){
     const list = loadList();
     listCount.textContent = '(' + list.length + '件)';
@@ -722,48 +887,28 @@ footer.note{margin-top:32px;font-size:12px;color:var(--muted-dim);}
       listBody.innerHTML = '<p class="empty">まだ追加されてないよ。フォームを埋めて「カードリストに追加」を押してね</p>';
       return;
     }
-    const { groups, order } = groupByRarity(list);
-
+    const { newGroups, newOrder, editItems } = groupForDisplay(list);
     listBody.innerHTML = '';
-    order.forEach(key => {
+
+    newOrder.forEach(key => {
       const g = document.createElement('div');
       g.className = 'rarity-group';
       const h = document.createElement('h3');
-      h.textContent = '【' + key + '】';
+      h.textContent = '【新規/' + key + '】';
       g.appendChild(h);
-      groups[key].forEach(item => {
-        const row = document.createElement('div');
-        row.className = 'list-entry';
-        row.style.borderLeftColor = RARITY_COLOR[item.rarity] || DEFAULT_COLOR;
-        const main = document.createElement('div');
-        main.className = 'le-main';
-        const name = document.createElement('div');
-        name.className = 'le-name';
-        name.textContent = item.name || '(名前未設定)';
-        if(item.submitted){
-          const tag = document.createElement('span');
-          tag.className = 'le-tag';
-          tag.textContent = '送信済み';
-          name.appendChild(tag);
-        }
-        const meta = document.createElement('div');
-        meta.className = 'le-meta';
-        meta.textContent = [item.type, 'コスト' + (item.cost || '?'), item.mod].filter(Boolean).join(' / ');
-        main.appendChild(name); main.appendChild(meta);
-        const del = document.createElement('button');
-        del.className = 'le-del';
-        del.setAttribute('aria-label','このカードを削除');
-        del.textContent = '×';
-        del.addEventListener('click', () => {
-          const cur = loadList().filter(x => x.id !== item.id);
-          saveList(cur);
-          renderList();
-        });
-        row.appendChild(main); row.appendChild(del);
-        g.appendChild(row);
-      });
+      newGroups[key].forEach(item => g.appendChild(buildListEntry(item)));
       listBody.appendChild(g);
     });
+
+    if(editItems.length > 0){
+      const g = document.createElement('div');
+      g.className = 'rarity-group';
+      const h = document.createElement('h3');
+      h.textContent = '【修正依頼】';
+      g.appendChild(h);
+      editItems.forEach(item => g.appendChild(buildListEntry(item)));
+      listBody.appendChild(g);
+    }
   }
 
   addToListBtn.addEventListener('click', () => {
@@ -771,6 +916,10 @@ footer.note{margin-top:32px;font-size:12px;color:var(--muted-dim);}
     if(!d.name){
       el.name.focus();
       return;
+    }
+    if(d.kind === 'edit'){
+      if(!d.mod){ el.mod.focus(); return; }
+      if(!d.content){ el.content.focus(); return; }
     }
     const list = loadList();
     d.id = Date.now() + '-' + Math.random().toString(36).slice(2,7);
@@ -836,9 +985,11 @@ footer.note{margin-top:32px;font-size:12px;color:var(--muted-dim);}
           headers: {'Content-Type': 'text/plain;charset=utf-8'},
           body: JSON.stringify({
             requestId: item.id,
+            kind: item.kind || 'new',
             mod: item.mod || '', name: item.name || '', rarity: item.rarity || '', type: item.type || '',
             cost: item.cost || '', effect: item.effect || '', upgrade: item.upgrade || '',
             replace: item.replace || '', notes: item.notes || '', art: item.art || '',
+            content: item.content || '',
             submitter: author, passphrase: passphrase
           }),
           signal: controller.signal
