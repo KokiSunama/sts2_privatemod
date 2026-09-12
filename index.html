@@ -820,23 +820,36 @@ footer.note{margin-top:32px;font-size:12px;color:var(--muted-dim);}
     }
     const author = authorEl.value.trim();
     sendRequestBtn.disabled = true;
+    // GAS側は遅いと10秒近くかかることがあるので、押した瞬間に分かるよう表示を変える
+    sendRequestBtn.textContent = pending.length > 1 ? `送信中(1/${pending.length})…` : '送信中…';
     const sentIds = [];
     let lastResult = null;
     try{
-      for(const item of pending){
-        const res = await fetch(SUBMIT_URL, {
-          method: 'POST',
-          // text/plain にするとブラウザのCORSプリフライトを回避できる。
-          // レスポンスはGAS側が実際にAccess-Control-Allow-Originを
-          // 返してくれるので普通に読める(no-corsは不要と確認済み)。
-          headers: {'Content-Type': 'text/plain;charset=utf-8'},
-          body: JSON.stringify({
-            mod: item.mod || '', name: item.name || '', rarity: item.rarity || '', type: item.type || '',
-            cost: item.cost || '', effect: item.effect || '', upgrade: item.upgrade || '',
-            replace: item.replace || '', notes: item.notes || '', art: item.art || '',
-            submitter: author, passphrase: passphrase
-          })
-        });
+      for(let i = 0; i < pending.length; i++){
+        const item = pending[i];
+        if(i > 0) sendRequestBtn.textContent = `送信中(${i + 1}/${pending.length})…`;
+
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 25000);
+        let res;
+        try{
+          res = await fetch(SUBMIT_URL, {
+            method: 'POST',
+            // text/plain にするとブラウザのCORSプリフライトを回避できる。
+            // レスポンスはGAS側が実際にAccess-Control-Allow-Originを
+            // 返してくれるので普通に読める(no-corsは不要と確認済み)。
+            headers: {'Content-Type': 'text/plain;charset=utf-8'},
+            body: JSON.stringify({
+              mod: item.mod || '', name: item.name || '', rarity: item.rarity || '', type: item.type || '',
+              cost: item.cost || '', effect: item.effect || '', upgrade: item.upgrade || '',
+              replace: item.replace || '', notes: item.notes || '', art: item.art || '',
+              submitter: author, passphrase: passphrase
+            }),
+            signal: controller.signal
+          });
+        } finally {
+          clearTimeout(timeoutId);
+        }
         let result = null;
         try{ result = JSON.parse(await res.text()); }catch(e){}
         lastResult = result;
@@ -864,7 +877,16 @@ footer.note{margin-top:32px;font-size:12px;color:var(--muted-dim);}
         flashButton(sendRequestBtn, '実装依頼を出す', '送信に失敗したよ...', 2600);
       }
     }catch(err){
-      flashButton(sendRequestBtn, '実装依頼を出す', '送信失敗...ネットワーク確認してね', 2600);
+      // タイムアウト等で失敗しても、途中まで送れた分は「送信済み」を反映しておく
+      if(sentIds.length > 0){
+        const sentIdSet = new Set(sentIds);
+        saveList(loadList().map(x => sentIdSet.has(x.id) ? Object.assign({}, x, {submitted: true}) : x));
+        renderList();
+      }
+      const msg = (err && err.name === 'AbortError')
+        ? 'GASの応答が遅すぎるみたい...時間を置いて試してね'
+        : '送信失敗...ネットワーク確認してね';
+      flashButton(sendRequestBtn, '実装依頼を出す', msg, 3200);
     }finally{
       sendRequestBtn.disabled = false;
     }
